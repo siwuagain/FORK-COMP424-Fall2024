@@ -6,6 +6,9 @@ import numpy as np
 from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
+from custom_utils import logger
+
+logger = logger.Logger()
 
 @register_agent("student_agent")
 class StudentAgent(Agent):
@@ -34,6 +37,7 @@ class StudentAgent(Agent):
 
     Please check the sample implementation in agents/random_agent.py or agents/human_agent.py for more details.
     """
+    logger.info("<< START >>: STUDENT AGENT STEP")
 
     # Some simple code to help you with timing. Consider checking 
     # time_taken during your search and breaking with the best answer
@@ -45,5 +49,7 @@ class StudentAgent(Agent):
 
     # Dummy return (you should replace this with your actual logic)
     # Returning a random valid move as an example
+
+    logger.info("<< END >>: STUDENT AGENT STEP")
     return random_move(chess_board,player)
 
