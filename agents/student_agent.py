@@ -51,5 +51,7 @@ class StudentAgent(Agent):
     # Returning a random valid move as an example
 
     logger.info("<< END >>: STUDENT AGENT STEP")
-    return random_move(chess_board,player)
+    move = random_move(chess_board, player)
 
+    logger.debug("MOVE: " + str(move))
+    return move
