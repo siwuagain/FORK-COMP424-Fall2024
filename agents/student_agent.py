@@ -8,6 +8,9 @@ import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
 from custom_utils import logger
 
+BLUE = '\033[34m'
+DEFAULT = '\033[0m'
+
 logger = logger.Logger()
 
 @register_agent("student_agent")
@@ -37,8 +40,10 @@ class StudentAgent(Agent):
 
     Please check the sample implementation in agents/random_agent.py or agents/human_agent.py for more details.
     """
-    logger.info("<< START >>: STUDENT AGENT STEP")
+    logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< START >>{DEFAULT}")
 
+    moves = get_valid_moves(chess_board, player)
+    logger.debug("VALID MOVES: " + str(moves))
     # Some simple code to help you with timing. Consider checking 
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
@@ -50,8 +55,9 @@ class StudentAgent(Agent):
     # Dummy return (you should replace this with your actual logic)
     # Returning a random valid move as an example
 
-    logger.info("<< END >>: STUDENT AGENT STEP")
+    
     move = random_move(chess_board, player)
 
     logger.debug("MOVE: " + str(move))
+    logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< END >>{DEFAULT}")
     return move
