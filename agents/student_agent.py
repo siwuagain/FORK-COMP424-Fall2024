@@ -6,13 +6,13 @@ import numpy as np
 from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
-from custom_utils import logger
+from custom_utils import logger, alphabeta
 
 BLUE = '\033[34m'
 DEFAULT = '\033[0m'
 
 logger = logger.Logger()
-
+alphabeta = alphabeta.Minimax()
 @register_agent("student_agent")
 class StudentAgent(Agent):
   """
@@ -42,8 +42,14 @@ class StudentAgent(Agent):
     """
     logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< START >>{DEFAULT}")
 
-    moves = get_valid_moves(chess_board, player)
-    logger.debug("VALID MOVES: " + str(moves))
+    _, player_score, opponent_score = check_endgame(chess_board, player, 3 - player)
+
+
+    # val = alphabeta.minimax(2, chess_board, player, player_score, opponent_score )
+
+    # logger.info("VALUE: " + str(val))
+    # moves = get_valid_moves(chess_board, player)
+    # logger.debug("VALID MOVES: " + str(moves))
     # Some simple code to help you with timing. Consider checking 
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
