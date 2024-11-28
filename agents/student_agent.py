@@ -48,28 +48,14 @@ class StudentAgent(Agent):
     if not moves:
       return None
     
-    best_value = -99999
-    best_move = None
-
-    if player_score + opponent_score >= (chess_board.shape[0] * chess_board.shape[1]) - 10:
-      for move in moves:
-        value = self.evaluate_end_move(chess_board, player, move, opponent)
-        if value >= best_value:
-          best_value = value
-          best_move = move
-
-    else:
-      for move in moves:
-        value = self.evaluate_move(chess_board, player, move, opponent)
-        if value >= best_value:
-          best_value = value
-          best_move = move
+    #best_value = -99999
+    #best_move = None
+   
       
     if best_move == None:
       return random_move(chess_board,player)
 
-
-    # val = alphabeta.minimax(2, chess_board, player, player_score, opponent_score )
+    move_value, move = alphabeta.minimax(2, chess_board, player, player_score, opponent_score )
 
     # logger.info("VALUE: " + str(val))
     # moves = get_valid_moves(chess_board, player)
@@ -86,7 +72,7 @@ class StudentAgent(Agent):
 
     logger.debug("MOVE: " + str(move))
     logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< END >>{DEFAULT}")
-    return best_move
+    return move
   
 
 
@@ -487,13 +473,9 @@ class StudentAgent(Agent):
     _, player_score, opponent_score = check_endgame(board, player, opponent)
     if board.shape[0] == 12 and player_score + opponent_score <= 10:
       move_value += count_capture(board, move, player)
+      
+    if player_score + opponent_score >= (chess_board.shape[0] * chess_board.shape[1]) - 10:
+      move_value = (5 * count_capture(board, move, player)) + move_value
 
     return move_value
-
-
-  def evaluate_end_move(self, board, player, move, opponent):
-
-    value = self.evaluate_move(board, player, move, opponent) + 5 * count_capture(board, move, player)
-
-    return value
 
