@@ -14,56 +14,57 @@ class Minimax:
   def minimax(self, 
               depth, 
               board, 
-              color, 
-              player_score, 
-              opponent_score, 
+              player,
+              opponent,
               alpha = float('-inf'), 
               beta = float('inf')):
     
     #basecase
-    is_endgame, player_score, opponent_score = check_endgame(board, color, player_score)
+    is_endgame, player_score, opponent_score = check_endgame(board, player, player_score)
     if is_endgame or depth == self.max_depth:
       return self.evaluate_board(board, color, player_score, opponent_score) #only a placeholder, what should be the score?
     
-    legal_moves = get_valid_moves(board, color)
-
-    logger.debug("PLAYER "+ str(color)+ " " + "LEGAL MOVES: " + str(legal_moves))
+    legal_moves = get_valid_moves(board, player)
     
     #MAXIMIZING PLAYER
-    if color == 1:
+    if player == 1:
       best_val = float('-inf')
-      # best_move = None
+      best_move = None
 
       for move in legal_moves:
         simulated_board = copy.deepcopy(board)
-        execute_move(simulated_board, move, color)
+        execute_move(simulated_board, move, player)
 
-        val = self.minimax(depth+1, board, 3-color, opponent_score, player_score, alpha, beta)
-        best_val = max(best_val, val)
+        val = self.minimax(depth+1, simulated_board, opponent, player, opponent_score, player_score, alpha, beta)
         if val > best_val:
           best_val = val
-          #best_move = move
+          best_move = move
+
+        alpha= max(alpha, best_val)
         if beta <= alpha:
           break
-      return best_val
+
+      return best_val, best_move
 
     #MINIMIZING PLAYER
     else:
       best_val = float("inf")
-      # best_move = None
+      best_move = None
       for move in legal_moves:
         simulated_board = copy.deepcopy(board)
-        execute_move(simulated_board, move, color)
+        execute_move(simulated_board, move, player)
 
-        val = self.minimax(depth+1, board, 3-color, player_score, opponent_score, alpha, beta)
-        best_val = min(best_val, val)
+        val = self.minimax(depth+1, simulated_board, opponent, player, alpha, beta)
+        
         if val < best_val:
           best_val = val
-          #best_move = move
+          best_move = move
+
         beta = min(beta, best_val)
         if beta <= alpha:
           break
-      return best_val
+
+      return best_val, best_move
 
 
   def evaluate_board(self, board, color, player_score, opponent_score):
