@@ -3,16 +3,16 @@ from agents.agent import Agent
 from store import register_agent
 import sys
 import numpy as np
-from copy import deepcopy
+import copy
 import time
-from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves, count_capture_dir
-from custom_utils import logger, alphabeta
+from helpers import random_move, execute_move, check_endgame, get_valid_moves
+from custom_utils import logger#, alphabeta
 
 BLUE = '\033[34m'
 DEFAULT = '\033[0m'
 
 logger = logger.Logger()
-alphabeta = alphabeta.Minimax()
+#alphabeta = alphabeta.Minimax()
 @register_agent("student_agent")
 class StudentAgent(Agent):
   """
@@ -42,20 +42,11 @@ class StudentAgent(Agent):
     """
     logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< START >>{DEFAULT}")
 
-    _, player_score, opponent_score = check_endgame(chess_board, player, 3 - player)
-    moves = get_valid_moves(chess_board, player)
-
-    if not moves:
-      return None
+    start_time = time.time()
     
-    #best_value = -99999
-    #best_move = None
+    val, move = self.minimax(0, 4, chess_board, True, player, opponent, float("-inf"), float("inf"), start_time)
    
-      
-    if best_move == None:
-      return random_move(chess_board,player)
 
-    move_value, move = alphabeta.minimax(2, chess_board, player, player_score, opponent_score )
 
     # logger.info("VALUE: " + str(val))
     # moves = get_valid_moves(chess_board, player)
@@ -63,7 +54,7 @@ class StudentAgent(Agent):
     # Some simple code to help you with timing. Consider checking 
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
-    start_time = time.time()
+    
     time_taken = time.time() - start_time
     print("My AI's turn took ", time_taken, "seconds.")
 
@@ -76,406 +67,222 @@ class StudentAgent(Agent):
   
 
 
-  def evaluate_move(self, board, player, move, opponent):
 
-    move_value = 0
-    r, c = move
+  def evaluate_board(self, board, player, opponent):
 
-    #move_value += 0.30 * count_capture(board, move, player)
+    is_endgame, score1, score2 = check_endgame(board, player, opponent)
+    if is_endgame:
+      if (score1 > score2):
+        return float("inf"), None
+      else:
+        return float("-inf"), None
 
     #memo: board.shape[0]=number of rows, board.shape[1]=number of columns
-
     corners = [(0, 0), (0, board.shape[1] - 1), (board.shape[0] - 1, 0), (board.shape[0] - 1, board.shape[1] - 1)]
-    adjacent_to_corners = [(1, 1), (1, 0), (0, 1), (board.shape[0] - 2, 0), (board.shape[0] - 2, 1), (board.shape[0] - 1, 1), (0, board.shape[1] - 2), (1, board.shape[1] - 2), (1, board.shape[1] - 1), (board.shape[0] - 2, board.shape[1] - 1), (board.shape[0] - 2, board.shape[1] - 2), (board.shape[0] - 1, board.shape[1] - 2)]
+    adjacent_to_corners = [(1, 0), (0, 1), (board.shape[0] - 2, 0), (board.shape[0] - 1, 1), (0, board.shape[1] - 2), (1, board.shape[1] - 1), (board.shape[0] - 2, board.shape[1] - 1), (board.shape[0] - 1, board.shape[1] - 2)]
     corner_gifters = [(1, 1), (1, board.shape[1] - 2), (board.shape[0] - 2, 1), (board.shape[0] - 2, board.shape[1] - 2)]
     step_to_corners = [(0, 2), (2, 0), (board.shape[0] - 3, 0), (board.shape[0] - 1, 2), (0, board.shape[1] - 3), (2, board.shape[1] - 1), (board.shape[0] - 1, board.shape[1] - 3), (board.shape[0] - 3, board.shape[1] - 1)]
     inner_corners = [(2,2), (2, board.shape[1] - 3), (board.shape[0] - 3, 2), (board.shape[0] - 3, board.shape[1] - 3)]
 
-    if move in corners:
-      move_value += 5000
+#mobility score
+
+    player_moves = len(get_valid_moves(board, player))
+    opponent_moves = len(get_valid_moves(board, opponent))
+
+    mobility_score = 100 * (player_moves - opponent_moves)/ (player_moves + opponent_moves)
+
+#corner score
+    player_corner_score = 0
+    opponent_corner_score = 0
+
+    for corner in corners:
+      if board[corner] == player:
+        player_corner_score += 1
+      elif board[corner] == opponent:
+        opponent_corner_score += 1
+    
+    if (player_corner_score + opponent_corner_score) == 0:
+      corner_score = 0
+    else:
+      corner_score = 100 * (player_corner_score - opponent_corner_score) / (player_corner_score + opponent_corner_score)
+
+#adjacent to corner score
+    player_adj_score = 0
+    opponent_adj_score = 0
 
     count = -1
     for adj in adjacent_to_corners:
       count += 1
-      if move == adj:
-        if (count in (0, 1, 2)) and (board[corners[0]]==player):
-          move_value += 100
-          break
-        elif (count in (3, 4, 5)) and (board[corners[2]]==player):
-          move_value += 100
-          break
-        elif (count in (6, 7, 8)) and (board[corners[1]]==player):
-          move_value += 100
-          break
-        elif (count in (9, 10, 11)) and (board[corners[3]]==player):
-          move_value += 100
-          break
+
+      if board[adj] == player:
+        if (count in (0, 1)) and (board[corners[0]]==player):
+          player_adj_score += 1
+        elif (count in (2, 3)) and (board[corners[2]]==player):
+          player_adj_score += 1
+        elif (count in (4, 5)) and (board[corners[1]]==player):
+          player_adj_score += 1
+        elif (count in (6, 7)) and (board[corners[3]]==player):
+          player_adj_score += 1
         else:
-          move_value -= 30
+          opponent_adj_score += 2
+
+      elif board[adj] == opponent:
+        if (count in (0, 1)) and (board[corners[0]]==opponent):
+          opponent_adj_score += 1
+        elif (count in (2, 3)) and (board[corners[2]]==opponent):
+          opponent_adj_score += 1
+        elif (count in (4, 5)) and (board[corners[1]]==opponent):
+          opponent_adj_score += 1
+        elif (count in (6, 7)) and (board[corners[3]]==opponent):
+          opponent_adj_score += 1
+        else:
+          player_adj_score -= 2 #will need to figure out an actual number. Risking giving a corner is worth more than growing the corner line
+    
+    if (player_adj_score + opponent_adj_score) == 0:
+      adj_score = 0
+    else:
+      adj_score = 100 * (player_adj_score - opponent_adj_score) / (player_adj_score + opponent_adj_score)
+
+
+#inner corner score
+    inner_corner_player_score = 0
+    inner_corner_opponent_score = 0
+
+    for inner_corner in inner_corners:
+      if board[inner_corner] == player:
+        inner_corner_player_score += 1
+      elif board[inner_corner] == opponent:
+        inner_corner_opponent_score += 1
+    
+    if (inner_corner_player_score + inner_corner_opponent_score) == 0:
+      inner_corner_score = 0
+    else:
+      inner_corner_score = 100 * (inner_corner_player_score - inner_corner_opponent_score) / (inner_corner_player_score + inner_corner_opponent_score)
+
+#corner gifter score
+    player_cg_score = 0
+    opponent_cg_score = 0
+
+    count = 0
+    for cg in corner_gifters:
+      if board[cg] == player and board[corners[count]] != player:
+        opponent_cg_score += 1
+      elif board[cg] == opponent and board[corners[count]] != opponent:
+        player_cg_score += 1
+      count += 1
+    
+    if player_cg_score + opponent_cg_score == 0:
+      cg_score = 0
+    else:
+      cg_score = 100 * (player_cg_score - opponent_cg_score) / (player_cg_score + opponent_cg_score)
+
+#step to corner score
+    player_step_score = 0
+    opponent_step_score = 0
+
+    count = 0
+    for st_corner in step_to_corners: 
+
+      if board[st_corner] == player:
+        if count in (0, 1):
+          if (board[corners[0]] != player and board[corners[0]] != opponent):
+            player_step_score += 1
+        elif count in (2, 3):
+          if (board[corners[2]] != player and board[corners[2]] != opponent):
+            player_step_score += 1
+        elif count in (4, 5):
+          if (board[corners[1]] != player and board[corners[1]] != opponent):
+            player_step_score += 1
+        else:
+          if (board[corners[3]] != player and board[corners[3]] != opponent):
+            player_step_score += 1
+      
+      elif board[st_corner] == opponent:
+        if count in (0, 1):
+          if (board[corners[0]] != player and board[corners[0]] != opponent):
+            opponent_step_score += 1
+        elif count in (2, 3):
+          if (board[corners[2]] != player and board[corners[2]] != opponent):
+            opponent_step_score += 1
+        elif count in (4, 5):
+          if (board[corners[1]] != player and board[corners[1]] != opponent):
+            opponent_step_score += 1
+        else:
+          if (board[corners[3]] != player and board[corners[3]] != opponent):
+            opponent_step_score += 1
+
+    if (player_step_score + opponent_step_score) == 0:
+      step_to_corners_score = 0
+    else: step_to_corners_score = 100 * (player_step_score - opponent_step_score) / (player_step_score + opponent_step_score)
+
+    board_value = 3*corner_score + 0.25*mobility_score + adj_score + 0.5*inner_corner_score + 2*cg_score + 0.75*step_to_corners_score
+    return board_value, None
+  
+  
+
+  def minimax(self,
+              depth, 
+              max_depth,
+              board, 
+              is_maximizing,
+              player,
+              opponent,
+              alpha, 
+              beta,
+              start_time):
+    
+    
+    legal_moves = get_valid_moves(board, player)
+    is_endgame, _, _ = check_endgame(board, player, opponent)
+    #basecase
+    if is_endgame or depth == max_depth or len(legal_moves) == 0 or time.time() - start_time >= 1.8:
+      return self.evaluate_board(board, player, opponent)
+    
+    
+    
+    #MAXIMIZING PLAYER
+    if is_maximizing:
+      best_val = float('-inf')
+      best_move = None
+
+      for cur_move in legal_moves:
+        simulated_board = copy.deepcopy(board)
+        execute_move(simulated_board, cur_move, player)
+
+        val, _ = self.minimax(depth+1, max_depth, simulated_board, False, player, opponent, alpha, beta, start_time)
+        if val >= best_val:
+          best_val = val
+          best_move = cur_move
+
+        alpha = max(alpha, best_val)
+        if beta <= alpha:
           break
 
-    count = -1
-    for gifter in corner_gifters:
-      count +=1
-      if board[gifter] == opponent and (board[corners[count]] != opponent and board[corners[count]] != player):
-        x, y = gifter
+      return best_val, best_move
 
-        if count == 3:
+    #MINIMIZING PLAYER
+    else:
+      best_val = float("inf")
+      best_move = None
+      for cur_move in legal_moves:
+        simulated_board = copy.deepcopy(board)
+        execute_move(simulated_board, cur_move, opponent)
 
-          i = 1
-          while (x-i > 0):
-            
-            if board[x-i, y-i] != opponent:
-              break
-            if x-i == r and c<y-i:
-              if count_capture_dir(board, move, player, (0,1)) >= (y-i)-c:
-                move_value += 19
-                break
-              break
-            if x-i == r and c>y-i:
-              if count_capture_dir(board, move, player, (0,-1)) >= c-(y-i):
-                move_value += 19
-                break
-              break
-            if r<x-i and y-i == c:
-              if count_capture_dir(board, move, player, (1,0)) >= (x-i)-r:
-                move_value += 19
-                break
-              break
-            if r>x-i and y-i == c:
-              if count_capture_dir(board, move, player, (-1,0)) >= r-(x-i):
-                move_value += 19
-                break
-              break
-            i+=1
+        val, _ = self.minimax(depth+1, max_depth, simulated_board, True, player, opponent, alpha, beta, start_time)
+        
+        if val <= best_val:
+          best_val = val
+          best_move = cur_move
+
+        beta = min(beta, best_val)
+        if beta <= alpha:
           break
 
-        if count == 0:
+      return best_val, best_move
 
-          i = 1
-          while (x+i < board.shape[0] - 1):
-
-            if board[x+i, y+i] != opponent:
-              break
-            if x+i == r and c<y+i:
-              if count_capture_dir(board, move, player, (0,1)) >= (y+i)-c:
-                move_value += 19
-                break
-              break
-            if x+i == r and c>y+i:
-              if count_capture_dir(board, move, player, (0,-1)) >= c-(y+i):
-                move_value += 19
-                break
-              break
-            if r<x+i and y+i == c:
-              if count_capture_dir(board, move, player, (1,0)) >= (x+i)-r:
-                move_value += 19
-                break
-              break
-            if r>x+i and y+i == c:
-              if count_capture_dir(board, move, player, (-1,0)) >= r-(x+i):
-                move_value += 19
-                break
-              break
-            i+=1
-          break
-
-        if count == 1:
-
-          i = 1
-          while (x+i < board.shape[0] - 1):
-
-            if board[x+i, y-i] != opponent:
-              break
-            if x+i == r and c<y-i:
-              if count_capture_dir(board, move, player, (0,1)) >= (y-i)-c:
-                move_value += 19
-                break
-              break
-            if x+i == r and c>y-i:
-              if count_capture_dir(board, move, player, (0,-1)) >= c-(y-i):
-                move_value += 19
-                break
-              break
-            if r<x+i and y-i == c:
-              if count_capture_dir(board, move, player, (1,0)) >= (x+i)-r:
-                move_value += 19
-                break
-              break
-            if r>x+i and y-i == c:
-              if count_capture_dir(board, move, player, (-1,0)) >= r-(x+i):
-                move_value += 19
-                break
-              break
-            i+=1
-          break
-
-        if count == 2:
-
-          i = 1
-          while (x-i >0):
-
-            if board[x-i, y+i] != opponent:
-              break
-            if x-i == r and c<y+i:
-              if count_capture_dir(board, move, player, (0,1)) >= (y+i)-c:
-                move_value += 19
-                break
-              break
-            if x-i == r and c>y+i:
-              if count_capture_dir(board, move, player, (0,-1)) >= c-(y+i):
-                move_value += 19
-                break
-              break
-            if r<x-i and y+i == c:
-              if count_capture_dir(board, move, player, (1,0)) >= (x-i)-r:
-                move_value += 19
-                break
-              break
-            if r>x-i and y+i == c:
-              if count_capture_dir(board, move, player, (-1,0)) >= r-(x-i):
-                move_value += 19
-                break
-              break
-            i+=1
-          break
-        break
 
   
-    
-    if (1 <= r <= board.shape[0] - 2 and 1 <= c <= board.shape[1] - 2):
-
-      if move in inner_corners:
-        move_value += 1
-
-      if (r == 2 and 2 <= c <= board.shape[1] - 3):
-        move_value += 5
-      elif (r == board.shape[0] - 3 and 2 <= c <= board.shape[1] - 3):
-        move_value += 5
-      elif (2 <= r <= board.shape[0] - 3 and c == 2):
-        move_value += 5
-      elif (2 <= r <= board.shape[0] - 3 and c == board.shape[1] - 3):
-        move_value += 5
-      
-      elif (r == 1 and 1 <= c <= board.shape[1] - 2):
-        move_value -= 3
-      elif (r == board.shape[0] - 2 and 1 <= c <= board.shape[1] - 2):
-        move_value -= 3
-      elif (1 <= r <= board.shape[0] - 2 and c == 1):
-        move_value -= 3
-      elif (1 <= r <= board.shape[0] - 2 and c == board.shape[1] - 2):
-        move_value -= 3
-    
-    else: #on a border
-
-      if move in step_to_corners:
-      # have to check whether or not placing here would give the opportunity for the opponent to take the corner
-
-        if ((r == 0 and c == 2) or (r == 2 and c == 0)):
-          if board[1,1] == opponent and (board[0,0] != player and board[0,0] != opponent):
-            if ((board[0, 2] == player) or (board[2,0] == player)):
-              move_value -= 15
-          else:
-            if ((board[0,0] == player and (move == (0,2) or move == (2,0))) or (board[corners[1]] == player and (move == step_to_corners[4] or move == step_to_corners[5])) or (board[corners[2]] == player and (move == step_to_corners[2] or move == step_to_corners[3])) or (board[corners[3]] == player and (move == step_to_corners[6] or move == step_to_corners[7]))):
-              move_value -= 12
-            else:
-              move_value += 5
-         
-        elif ((r == 0 and c == board.shape[1] - 3) or (r == 2 and c == board.shape[1] - 1)):
-          if board[1, board.shape[1] - 2] == opponent and (board[0, board.shape[1] - 1] != opponent and board[0, board.shape[1] - 1] != player):
-            if ((board[0, board.shape[1] - 3] == player) or (board[2, board.shape[1] - 1] == player)):
-              move_value -= 15
-          else:
-            if ((board[0,0] == player and (move == (0,2) or move == (2,0))) or (board[corners[1]] == player and (move == step_to_corners[4] or move == step_to_corners[5])) or (board[corners[2]] == player and (move == step_to_corners[2] or move == step_to_corners[3])) or (board[corners[3]] == player and (move == step_to_corners[6] or move == step_to_corners[7]))):
-              move_value -= 12
-            else:
-              move_value += 5
-
-        elif ((r == board.shape[1] - 3 and c == 0) or (r == board.shape[1] - 1 and c == 2)):
-          if board[board.shape[1] - 2, 1] == opponent and (board[board.shape[0] - 1, 0] != player and board[board.shape[0] - 1, 0] != opponent):
-            if ((board[board.shape[1] - 3, 0] == player) or (board[board.shape[1] - 1, 2] == player)):
-              move_value -= 15
-          else: 
-            if ((board[0,0] == player and (move == (0,2) or move == (2,0))) or (board[corners[1]] == player and (move == step_to_corners[4] or move == step_to_corners[5])) or (board[corners[2]] == player and (move == step_to_corners[2] or move == step_to_corners[3])) or (board[corners[3]] == player and (move == step_to_corners[6] or move == step_to_corners[7]))):
-              move_value -= 12
-            else:
-              move_value += 5
-
-        else:
-          if board[board.shape[0] - 2, board.shape[1] - 2] == opponent and (board[board.shape[0] - 1, board.shape[1] -1] != opponent and board[board.shape[0] - 1, board.shape[1] -1] != player):
-            if ((board[board.shape[0] - 1, board.shape[1] - 3] == player) or (board[board.shape[0] - 3, board.shape[1] - 1] == player)):
-              move_value -= 15
-          else: 
-            if ((board[0,0] == player and (move == (0,2) or move == (2,0))) or (board[corners[1]] == player and (move == step_to_corners[4] or move == step_to_corners[5])) or (board[corners[2]] == player and (move == step_to_corners[2] or move == step_to_corners[3])) or (board[corners[3]] == player and (move == step_to_corners[6] or move == step_to_corners[7]))):
-              move_value -= 12
-            else:
-              move_value += 5
 
 
-      if (r == 0 or r == board.shape[0] - 1):
-        if c < board.shape[1]/2:
-          if c%2 == 0:
-            move_value+=1
-        else:
-          if c%2 == 1:
-            move_value+=1
 
-      if (c == 0 or c == board.shape[1] - 1):
-        if r < board.shape[0]/2:
-          if r%2 == 0:
-            move_value+=1
-        else:
-          if r%2 == 1:
-            move_value+=1
-
-
-      if ((r == 0 or r == board.shape[0] - 1) and 1 <= c <= board.shape[1] - 2):
-
-        if board[r, c-1] == opponent:
-          i = 2
-          while c-i >= 0:
-            if board[r, c-i] == player:
-              move_value += 32
-              if (r,c) in adjacent_to_corners:
-                move_value -= 32
-                while c-i>=0:
-                  if board[r, c-i] != player and board[r, c-i] != opponent:
-                    break
-                  if c-i == 0 and board[r, c-i] == player:
-                    move_value += 32
-                    break
-                  i+=1
-              break
-            elif board[r, c-i] == opponent:
-              i+=1
-            else:
-              move_value -= 11
-              break
-
-        if board[r, c+1] == opponent:
-          i = 2
-          while c+i <= board.shape[0] - 1:
-            if board[r, c+i] == player:
-              move_value += 32
-              if (r,c) in adjacent_to_corners:
-                move_value -= 32
-                while c+i <= board.shape[0] - 1:
-                  if board[r, c+i] != player and board[r, c+i] != opponent:
-                    break
-                  if c+i == board.shape[0] -1 and board[r, c+i] == player:
-                    move_value += 32
-                    break
-                  i+=1
-              break
-            elif board[r, c+i] == opponent:
-              i+=1
-            else:
-              move_value -= 11
-              break
-
-        if board[r, c-1] == player:
-          i = 2
-          while c-i >= 0:
-            if board[r, c-i] == opponent:
-              break
-            if board[r, c-i] != player:
-              move_value += 5
-              break
-            if c-i == 0:
-              move_value += 31
-            i+=1
-
-        if board[r, c+1] == player:
-          i = 2
-          while c+i <= board.shape[1]-1:
-            if board[r, c+i] == opponent:
-              break
-            if board[r, c+i] != player:
-              move_value += 5
-              break
-            if c+i == board.shape[1]-1:
-              move_value += 31
-            i+=1
-
-      
-      if (1 <= r <= board.shape[0] - 2 and (c == 0 or c == board.shape[1] - 1)):
-
-        if board[r-1, c] == opponent:
-          i = 2
-          while r-i >= 0:
-            if board[r-i, c] == player:
-              move_value += 32
-              if (r,c) in adjacent_to_corners:
-                move_value -= 32
-                while r-i>=0:
-                  if board[r-i, c] != player and board[r-i, c] != opponent:
-                    break
-                  if r-i == 0 and board[r-i, c] == player:
-                    move_value += 32
-                    break
-                  i+=1
-              break
-            elif board[r-i, c] == opponent:
-              i+=1
-            else:
-              move_value -= 11
-              break
-
-        if board[r+1, c] == opponent:
-          i = 2
-          while r+i <= board.shape[0] - 1:
-            if board[r+i, c] == player:
-              move_value += 32
-              if (r,c) in adjacent_to_corners:
-                move_value -= 32
-                while r+i <= board.shape[0] - 1:
-                  if board[r+i, c] != player and board[r+i, c] != opponent:
-                    break
-                  if r+i == board.shape[0] - 1 and board[r+i, c] == player:
-                    move_value += 32
-                    break
-                  i+=1
-              break
-            elif board[r+i, c] == opponent:
-              i+=1
-            else:
-              move_value -= 11
-              break
-
-        if board[r-1, c] == player:
-          i = 2
-          while r-i >= 0:
-            if board[r-i, c] == opponent:
-              break
-            if board[r-i, c] != player:
-              move_value += 5
-              break
-            if r-i == 0:
-              move_value += 31
-              break
-            i+=1
-
-        if board[r+1, c] == player:
-          i = 2
-          while r+i <= board.shape[0]-1:
-            if board[r+i, c] == opponent:
-              break
-            if board[r+i, c] != player:
-              move_value += 5
-              break
-            if r+i == board.shape[0]-1:
-              move_value += 31
-              break
-            i+=1
-              
-      move_value += 7
-    
-    _, player_score, opponent_score = check_endgame(board, player, opponent)
-    if board.shape[0] == 12 and player_score + opponent_score <= 10:
-      move_value += count_capture(board, move, player)
-      
-    if player_score + opponent_score >= (chess_board.shape[0] * chess_board.shape[1]) - 10:
-      move_value = (5 * count_capture(board, move, player)) + move_value
-
-    return move_value
 

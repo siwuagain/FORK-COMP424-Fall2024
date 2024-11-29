@@ -31,8 +31,8 @@ def get_args():
     parser.add_argument("--display_delay", type=float, default=0.4)
     parser.add_argument("--display_save", action="store_true", default=False)
     parser.add_argument("--display_save_path", type=str, default="plots/")
-    parser.add_argument("--autoplay", action="store_true", default=False)
-    parser.add_argument("--autoplay_runs", type=int, default=100)
+    parser.add_argument("--autoplay", action="store_true", default=True)
+    parser.add_argument("--autoplay_runs", type=int, default=200)
     args = parser.parse_args()
     return args
 
