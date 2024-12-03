@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument(
         "--board_size_min",
         type=int,
-        default=6,
+        default=12,
         help="In autoplay mode, the minimum board size",
     )
     parser.add_argument(
@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument("--display_save", action="store_true", default=False)
     parser.add_argument("--display_save_path", type=str, default="plots/")
     parser.add_argument("--autoplay", action="store_true", default=True)
-    parser.add_argument("--autoplay_runs", type=int, default=200)
+    parser.add_argument("--autoplay_runs", type=int, default=12)
     args = parser.parse_args()
     return args
 

@@ -5,14 +5,13 @@ import sys
 import numpy as np
 import copy
 import time
-from helpers import random_move, execute_move, check_endgame, get_valid_moves, count_capture
-from custom_utils import logger#, alphabeta
+from helpers import execute_move, check_endgame, get_valid_moves
+from custom_utils import logger
 
 BLUE = '\033[34m'
 DEFAULT = '\033[0m'
 
 logger = logger.Logger()
-#alphabeta = alphabeta.Minimax()
 @register_agent("student_agent")
 class StudentAgent(Agent):
   """
@@ -44,27 +43,17 @@ class StudentAgent(Agent):
 
     start_time = time.time()
 
-    if chess_board.shape[0] == 6:
+    if chess_board.shape[0] == 6 or chess_board.shape[0] == 8:
       max_depth = 4
     else:
-      max_depth = 4
+      max_depth = 3
     
     val, move = self.minimax(0, max_depth, chess_board, True, player, opponent, float("-inf"), float("inf"), start_time)
    
-
-
-    # logger.info("VALUE: " + str(val))
-    # moves = get_valid_moves(chess_board, player)
-    # logger.debug("VALID MOVES: " + str(moves))
-    # Some simple code to help you with timing. Consider checking 
-    # time_taken during your search and breaking with the best answer
-    # so far when it nears 2 seconds.
     
     time_taken = time.time() - start_time
     print("My AI's turn took ", time_taken, "seconds.")
 
-    # Dummy return (you should replace this with your actual logic)
-    # Returning a random valid move as an example
 
     logger.debug("MOVE: " + str(move))
     logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< END >>{DEFAULT}")
@@ -75,7 +64,16 @@ class StudentAgent(Agent):
 
   def evaluate_board(self, board, player, opponent):
 
-    is_endgame, score1, score2 = check_endgame(board, player, opponent)
+#checking if this is the last move
+    is_endgame, s1, s2 = check_endgame(board, player, opponent)
+
+    if player == 1:
+      score1 = s1
+      score2 = s2
+    else:
+      score1 = s2
+      score2 = s1
+
     if is_endgame:
       if (score1 > score2):
         return float("inf"), None
@@ -83,14 +81,15 @@ class StudentAgent(Agent):
         return 0, None
       else:
         return float("-inf"), None
+      
+    rows, cols = board.shape
 
-    #memo: board.shape[0]=number of rows, board.shape[1]=number of columns
-    corners = [(0, 0), (0, board.shape[1] - 1), (board.shape[0] - 1, 0), (board.shape[0] - 1, board.shape[1] - 1)]
-    adjacent_to_corners = [(1, 0), (0, 1), (board.shape[0] - 2, 0), (board.shape[0] - 1, 1), (0, board.shape[1] - 2), (1, board.shape[1] - 1), (board.shape[0] - 2, board.shape[1] - 1), (board.shape[0] - 1, board.shape[1] - 2)]
-    corner_gifters = [(1, 1), (1, board.shape[1] - 2), (board.shape[0] - 2, 1), (board.shape[0] - 2, board.shape[1] - 2)]
-    step_to_corners = [(0, 2), (2, 0), (board.shape[0] - 3, 0), (board.shape[0] - 1, 2), (0, board.shape[1] - 3), (2, board.shape[1] - 1), (board.shape[0] - 1, board.shape[1] - 3), (board.shape[0] - 3, board.shape[1] - 1)]
-    inner_corners = [(2,2), (2, board.shape[1] - 3), (board.shape[0] - 3, 2), (board.shape[0] - 3, board.shape[1] - 3)]
-
+    corners = [(0, 0), (0, cols - 1), (rows - 1, 0), (rows - 1, cols - 1)]
+    adjacent_to_corners = [(1, 0), (0, 1), (rows - 2, 0), (rows - 1, 1), (0, cols - 2), (1, cols - 1), (rows - 2, cols - 1), (rows - 1, cols - 2)]
+    corner_gifters = [(1, 1), (1, cols - 2), (rows - 2, 1), (rows - 2, cols - 2)]
+    step_to_corners = [(0, 2), (2, 0), (rows - 3, 0), (rows - 1, 2), (0, cols - 3), (2, cols - 1), (rows - 1, cols - 3), (rows - 3, cols - 1)]
+    inner_corners = [(2,2), (2, cols - 3), (rows - 3, 2), (rows - 3, cols - 3)]
+    
 #mobility score
     player_moves = len(get_valid_moves(board, player))
     opponent_moves = len(get_valid_moves(board, opponent))
@@ -98,7 +97,6 @@ class StudentAgent(Agent):
     mobility_score = 100 * (player_moves - opponent_moves)/ (player_moves + opponent_moves)
 
 #point score
-
     if score1 == score2:
       point_score = 0
     else:
@@ -108,11 +106,13 @@ class StudentAgent(Agent):
     player_corner_score = 0
     opponent_corner_score = 0
 
+    count = 0
     for corner in corners:
       if board[corner] == player:
         player_corner_score += 1
       elif board[corner] == opponent:
         opponent_corner_score += 1
+      count+=1
     
     if (player_corner_score + opponent_corner_score) == 0:
       corner_score = 0
@@ -149,29 +149,27 @@ class StudentAgent(Agent):
         elif (count in (6, 7)) and (board[corners[3]]==opponent):
           opponent_adj_score += 1
         else:
-          player_adj_score -= 2 #will need to figure out an actual number. Risking giving a corner is worth more than growing the corner line
+          player_adj_score += 2
     
     if (player_adj_score + opponent_adj_score) == 0:
       adj_score = 0
     else:
       adj_score = 100 * (player_adj_score - opponent_adj_score) / (player_adj_score + opponent_adj_score)
 
-
 #inner corner score
-#    inner_corner_player_score = 0
-#    inner_corner_opponent_score = 0
+    inner_corner_player_score = 0
+    inner_corner_opponent_score = 0
 
-#    for inner_corner in inner_corners:
-#      if board[inner_corner] == player:
-#        inner_corner_player_score += 1
-#      elif board[inner_corner] == opponent:
-#        inner_corner_opponent_score += 1
+    for inner_corner in inner_corners:
+      if board[inner_corner] == player:
+        inner_corner_player_score += 1
+      elif board[inner_corner] == opponent:
+        inner_corner_opponent_score += 1
     
-#    if (inner_corner_player_score + inner_corner_opponent_score) == 0:
-#      inner_corner_score = 0
-#    else:
-#      inner_corner_score = 100 * (inner_corner_player_score - inner_corner_opponent_score) / (inner_corner_player_score + inner_corner_opponent_score)
-
+    if (inner_corner_player_score + inner_corner_opponent_score) == 0:
+      inner_corner_score = 0
+    else:
+      inner_corner_score = 100 * (inner_corner_player_score - inner_corner_opponent_score) / (inner_corner_player_score + inner_corner_opponent_score)
 
 #corner gifter score
     player_cg_score = 0
@@ -229,17 +227,45 @@ class StudentAgent(Agent):
       step_to_corners_score = 0
     else: step_to_corners_score = 100 * (player_step_score - opponent_step_score) / (player_step_score + opponent_step_score)
 
-    if board.shape[0] == 8 or board.shape[0] == 10:
-      step_to_corners_score = 0.3*step_to_corners_score
+#total
+    if rows == 8:
+      step_to_corners_score = 0.7*step_to_corners_score
+      inner_corner_score = 1.6*inner_corner_score
+      mobility_score = 0.25*mobility_score
+      if score1 + score2 >= (rows * cols) - 10:
+        point_score = 3*point_score
+    
+    elif rows == 10:
+      step_to_corners_score = 1.6*step_to_corners_score
+      inner_corner_score = 0.7*inner_corner_score
+      point_score = 0.8*point_score
+      cg_score = 0.8*cg_score
+      adj_score = 1.9*adj_score
       mobility_score = 0.2*mobility_score
-    elif board.shape[0] == 12:
-      step_to_corners_score = 0.4*step_to_corners_score
-      mobility_score = 0.15*mobility_score
+      if score1 + score2 >= (rows * cols) - 12:
+        point_score = 3*point_score
+
+    elif rows == 12:
+      step_to_corners_score = 1.2*step_to_corners_score
+      mobility_score = 0.2*mobility_score
+      inner_corner_score = 0.4*inner_corner_score
+      point_score = 1.1*point_score
+      cg_score = 1.2*cg_score
+      adj_score = 1.6*adj_score
+      corner_score = 1.1*corner_score
+      if score1 + score2 >= (rows * cols) - 14:
+        point_score = 4*point_score
+
     else:
-      mobility_score = 0.15*mobility_score
+      mobility_score = 0.1*mobility_score
+      step_to_corners_score = 0.1*step_to_corners_score
+      inner_corner_score = 0*inner_corner_score
+      adj_score = 1.2*adj_score
+      cg_score = 0*cg_score
+      point_score = 1.2*point_score
+      corner_score = 1.2*corner_score
 
-    board_value = 3*corner_score + mobility_score + 0.5*(adj_score + cg_score) + point_score + step_to_corners_score
-
+    board_value = 3*corner_score + mobility_score + 0.2*adj_score + 0.3*cg_score + point_score + step_to_corners_score + 0.1*inner_corner_score
     return board_value, None
   
   
@@ -254,16 +280,14 @@ class StudentAgent(Agent):
               alpha, 
               beta,
               start_time):
-    
-    
-    #legal_moves = get_valid_moves(board, player)
+        
     is_endgame, _, _ = check_endgame(board, player, opponent)
     #basecase
-    if is_endgame or depth == max_depth or time.time() - start_time >= 1.8:
+    if is_endgame or depth == max_depth or time.time() - start_time >= 1.85 or (depth == max_depth -1 and time.time() - start_time >= 1.72):
       return self.evaluate_board(board, player, opponent)
     
     
-    
+
     #MAXIMIZING PLAYER
     if is_maximizing:
       best_val = float('-inf')
