@@ -1,17 +1,10 @@
 # Student agent: Add your own agent here
 from agents.agent import Agent
 from store import register_agent
-import sys
-import numpy as np
 import copy
 import time
 from helpers import execute_move, check_endgame, get_valid_moves
-from custom_utils import logger
 
-BLUE = '\033[34m'
-DEFAULT = '\033[0m'
-
-logger = logger.Logger()
 @register_agent("student_agent")
 class StudentAgent(Agent):
   """
@@ -39,8 +32,7 @@ class StudentAgent(Agent):
 
     Please check the sample implementation in agents/random_agent.py or agents/human_agent.py for more details.
     """
-    logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< START >>{DEFAULT}")
-
+    
     start_time = time.time()
 
     if chess_board.shape[0] == 6 or chess_board.shape[0] == 8:
@@ -49,19 +41,12 @@ class StudentAgent(Agent):
       max_depth = 3
     
     val, move = self.minimax(0, max_depth, chess_board, True, player, opponent, float("-inf"), float("inf"), start_time)
-   
-    
+  
     time_taken = time.time() - start_time
     print("My AI's turn took ", time_taken, "seconds.")
 
-
-    logger.debug("MOVE: " + str(move))
-    logger.info(f"STUDENT AGENT STEP {DEFAULT}{BLUE}<< END >>{DEFAULT}")
     return move
   
-
-
-
   def evaluate_board(self, board, player, opponent):
 
 #checking if this is the last move
