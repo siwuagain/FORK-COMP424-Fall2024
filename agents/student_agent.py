@@ -229,31 +229,30 @@ class StudentAgent(Agent):
 
 #total
     if rows == 8:
-      step_to_corners_score = 0.7*step_to_corners_score
-      inner_corner_score = 1.6*inner_corner_score
+      inner_corner_score = 0.6*inner_corner_score
+      corner_score = 1.2*corner_score
+      cg_score = 1.6*cg_score
       mobility_score = 0.25*mobility_score
-      if score1 + score2 >= (rows * cols) - 10:
+      if score1 + score2 >= (rows * cols) - 2:
         point_score = 3*point_score
     
     elif rows == 10:
-      step_to_corners_score = 1.6*step_to_corners_score
+      step_to_corners_score = 1.4*step_to_corners_score
       inner_corner_score = 0.7*inner_corner_score
       point_score = 0.8*point_score
-      cg_score = 0.8*cg_score
       adj_score = 1.9*adj_score
       mobility_score = 0.2*mobility_score
-      if score1 + score2 >= (rows * cols) - 12:
+      if score1 + score2 >= (rows * cols) - 8:
         point_score = 3*point_score
 
     elif rows == 12:
-      step_to_corners_score = 1.2*step_to_corners_score
       mobility_score = 0.2*mobility_score
-      inner_corner_score = 0.4*inner_corner_score
+      inner_corner_score = 0.6*inner_corner_score
       point_score = 1.1*point_score
       cg_score = 1.2*cg_score
-      adj_score = 1.6*adj_score
+      adj_score = 1.5*adj_score
       corner_score = 1.1*corner_score
-      if score1 + score2 >= (rows * cols) - 14:
+      if score1 + score2 >= (rows * cols) - 10:
         point_score = 4*point_score
 
     else:
@@ -261,7 +260,7 @@ class StudentAgent(Agent):
       step_to_corners_score = 0.1*step_to_corners_score
       inner_corner_score = 0*inner_corner_score
       adj_score = 1.2*adj_score
-      cg_score = 0*cg_score
+      cg_score = 0.5*cg_score
       point_score = 1.2*point_score
       corner_score = 1.2*corner_score
 
@@ -283,16 +282,21 @@ class StudentAgent(Agent):
         
     is_endgame, _, _ = check_endgame(board, player, opponent)
     #basecase
-    if is_endgame or depth == max_depth or time.time() - start_time >= 1.85 or (depth == max_depth -1 and time.time() - start_time >= 1.72):
+    if is_endgame or depth == max_depth or time.time() - start_time >= 1.84 or (depth == max_depth -1 and time.time() - start_time >= 1.72):
       return self.evaluate_board(board, player, opponent)
     
-    
+    rows = board.shape[0]
+    cols = board.shape[1]
+    corners = [(0, 0), (0, cols - 1), (rows - 1, 0), (rows - 1, cols - 1)]
+    all_adj = [(1, 0), (0, 1), (rows - 2, 0), (rows - 1, 1), (0, cols - 2), (1, cols - 1), (rows - 2, cols - 1), (rows - 1, cols - 2), (1, 1), (1, cols - 2), (rows - 2, 1), (rows - 2, cols - 2)]
 
     #MAXIMIZING PLAYER
     if is_maximizing:
       best_val = float('-inf')
       best_move = None
       legal_moves = get_valid_moves(board, player)
+      legal_moves.sort(key=lambda move: move not in all_adj)
+      legal_moves.sort(key=lambda move: move not in corners)
 
       for cur_move in legal_moves:
         simulated_board = copy.deepcopy(board)
@@ -318,6 +322,8 @@ class StudentAgent(Agent):
       best_val = float("inf")
       best_move = None
       legal_moves = get_valid_moves(board, opponent)
+      legal_moves.sort(key=lambda move: move not in all_adj)
+      legal_moves.sort(key=lambda move: move not in corners)
 
       for cur_move in legal_moves:
         simulated_board = copy.deepcopy(board)
